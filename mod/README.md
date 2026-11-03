@@ -1,13 +1,13 @@
 # live-compact
 
-Auto-compaction for Claude Code without the wait. Shortly before the auto-compact threshold, the plugin asks the session's own model for a summary in the background. When auto-compaction starts, it puts that summary in place within milliseconds and keeps the newest messages unchanged. If no summary is ready, Claude Code runs its standard compaction.
+Auto-compaction for Claude Code without the wait. Shortly before the auto-compact threshold, the plugin asks the session's own model for a summary in the background. When auto-compaction starts, it replaces the conversation with that summary and the newest messages, unchanged, within milliseconds. If no summary is ready, Claude Code runs its standard compaction.
 
-Uses an early-access feature of Claude Code (plugin hooks); tested on Windows only. Installation in a terminal or in the VS Code extension, requirements, limitations, and how to disable or remove the plugin: [full documentation](https://github.com/SocialBuzzStudio/live-compact#installation).
+live-compact is a mod: a plugin whose code runs inside Claude Code, with your permissions. Tested on Windows only. Installation in a terminal or in the VS Code extension, requirements, limitations, and how to disable or remove the plugin: [full documentation](https://github.com/SocialBuzzStudio/live-compact).
 
 ## What it runs, sends and stores
 
-- Runs one code file (`hooks/register.ts`) inside Claude Code. It starts no programs and installs nothing.
-- Sends the conversation only where Claude Code already sends it: one background request per compaction to the same model, through Claude Code's own model call, the same content standard compaction would send. If that request fails, it is sent again after another 20k tokens; if its summary goes unused (for example after `/clear`), the request was extra. It contacts no other service.
+- Runs the code in `hooks/` (entry point `register.ts`) inside Claude Code. It starts no programs and installs nothing.
+- Sends the conversation only where Claude Code already sends it: one background request per compaction to the same model, through Claude Code's own model call, the same content standard compaction would send. If that request fails, it is sent again after another 20,000 tokens; if its summary is not used (for example after `/clear`), the request was wasted. It contacts no other service.
 - Stores nothing by default. Only if you set `LIVE_COMPACT_LOG_DIR` does it write one line per event to `<session id>.jsonl` in that folder: counts, times and reasons, no conversation text. It changes no settings or other files.
 
 ## Hooks

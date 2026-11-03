@@ -1,11 +1,11 @@
 flowchart TD
-    A["You keep working.<br/>Every 5 s the plugin<br/>checks the context size"]
-    B["The context is within<br/>40k tokens of the<br/>auto-compact threshold"]
+    A["You keep working.<br/>Every 5 seconds the<br/>plugin checks the<br/>context size"]
+    B["The context is close:<br/>within 40,000 tokens or<br/>20% of the threshold,<br/>whichever is smaller"]
     C["Background request: the same<br/>model writes the summary.<br/>Claude keeps working"]
     D["The context reaches<br/>the threshold:<br/>auto-compaction starts"]
     E{"Is a usable<br/>summary ready?"}
-    F["Summary and newest<br/>messages in place<br/>in 8-20 ms"]
-    G["Standard compaction:<br/>you wait, usually<br/>80-160 s"]
+    F["Summary and newest<br/>messages replace the<br/>conversation in<br/>8-20 milliseconds"]
+    G["Standard compaction:<br/>you wait 80-160<br/>seconds in our<br/>Opus sessions"]
     A --> B --> C --> D --> E
     E -- yes --> F
     E -- no --> G
