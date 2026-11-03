@@ -9,7 +9,7 @@ When a long session reaches its context limit, Claude Code stops and has the mod
 live-compact writes that summary in the background, while you keep working, as the context gets close to the limit. When auto-compaction starts, the plugin swaps in the ready summary in about 10-20 ms. It keeps the newest messages word for word. If no summary is ready yet, Claude Code compacts the usual way.
 
 > [!IMPORTANT]
-> live-compact uses Claude Code's plugin hook modules (`session.compact`, `$.model.fork`). That API is in early access and may change between releases. Tested with Claude Code 2.1.316 on Windows; other versions and systems are not verified yet.
+> live-compact uses Claude Code's plugin hook modules (`session.compact`, `$.model.fork`). That API is in early access and may change between releases. Tested on Windows: install and tests on Claude Code 2.1.300 to 2.1.317, compaction with the plugin on 2.1.317 from a clean profile. Other systems are not verified yet.
 
 ## How it works
 
@@ -34,7 +34,7 @@ Skills invoked earlier carry over with the same limits as standard compaction: n
 claude plugin install live-compact --marketplace SocialBuzzStudio/live-compact
 ```
 
-Or at the prompt of a session: `/plugin install live-compact --marketplace SocialBuzzStudio/live-compact`. Confirm adding the marketplace when asked. Restart running sessions so the plugin loads in them. `claude plugin list` should show `live-compact@socialbuzzstudio` as `enabled`.
+Or at the prompt of a session: `/plugin install live-compact --marketplace SocialBuzzStudio/live-compact`. Confirm adding the marketplace when asked. The one-line install needs Claude Code 2.1.292 or later; on older versions run `claude plugin marketplace add SocialBuzzStudio/live-compact`, then `claude plugin install live-compact@socialbuzzstudio`. Restart running sessions so the plugin loads in them. `claude plugin list` should show `live-compact@socialbuzzstudio` as `enabled`.
 
 Auto-compaction must be on (the default). The plugin uses whatever threshold Claude Code uses, so `autoCompactWindow` in `settings.json` and `/autocompact` work as before.
 
@@ -70,6 +70,7 @@ Set `LIVE_COMPACT_LOG_DIR` to a folder to get one JSON line per event in `<sessi
 ## Limitations
 
 - One extra request per compaction. The fork reads the whole transcript, mostly from the prompt cache, about what a standard compaction reads. If you `/clear` or end the session before compaction, that request is wasted.
+- A step that adds more than about 40k tokens at once (for example several large files read in parallel) can cross the threshold before the summary is ready. That compaction is a standard one.
 - A larger context after compaction. Messages after the fork's starting point stay word for word, usually up to about 40k tokens.
 - Images in the kept messages are dropped. Text from tool results stays.
 - The ready summary is dropped after `/clear`, resuming or forking the session, and reloading the plugin. The next compaction may then be a standard one.
