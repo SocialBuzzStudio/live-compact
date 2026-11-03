@@ -1,5 +1,8 @@
 import type { ApiMessage, SessionMessage } from 'claude-code'
 
+/** A message sent while a turn ran, as the engine filed it, and whether it carried an image. */
+export type SentDuringTurn = { text: string; media: boolean }
+
 /**
  * Keys that name user messages alike in `$.session.messages()` and a compact hook's `e.messages`
  * (the first carries no `handle`): the tool_use_id of its result, else its text numbered by
@@ -37,7 +40,7 @@ export function forkAnchor(rows: readonly SessionMessage[], api: readonly ApiMes
   return at < 0 ? undefined : anchorKeys(rows)[at]
 }
 
-export type Compaction = { messages: SessionMessage[] } | { reason: 'anchor-missing' | 'too-long' }
+export type Compaction = { messages: SessionMessage[] } | { reason: 'anchor-missing' | 'too-long' | 'image-sent-during-turn' }
 
 /**
  * The conversation after compaction: the head message, then every message after the anchor.
@@ -45,14 +48,29 @@ export type Compaction = { messages: SessionMessage[] } | { reason: 'anchor-miss
  * the messages may be cut to the newest 4096, as occurrences then shift.
  *
  * A message with tool results goes back without its `handle`: kept whole, the engine links it to
- * the pre-compaction copy of its tool_use, so `--resume` loads the full history (E1-S4).
+ * the pre-compaction copy of its tool_use, so `--resume` loads the full history (E1-S4). Rebuilt,
+ * it would lose a message sent during the turn that the engine keeps beside it, so that one's text
+ * (`sent`, by the tool_use_id of the result it came after) joins it; one with an image is refused,
+ * as only text goes back.
  */
-export function compacted(messages: readonly SessionMessage[], anchor: string, head: string): Compaction {
+export function compacted(
+  messages: readonly SessionMessage[],
+  anchor: string,
+  head: string,
+  sent: ReadonlyMap<string, SentDuringTurn> = new Map(),
+): Compaction {
   if (messages.length >= 4096) return { reason: 'too-long' }
   const hit = anchorKeys(messages).indexOf(anchor)
   if (hit < 0 || messages[hit + 1]?.role !== 'assistant') return { reason: 'anchor-missing' }
-  const tail = messages.slice(hit + 1).map(m =>
-    m.toolResults?.length ? { role: m.role, text: m.text, toolUses: [], toolResults: m.toolResults } : m,
-  )
+  const tail: SessionMessage[] = []
+  for (const m of messages.slice(hit + 1)) {
+    if (!m.toolResults?.length) {
+      tail.push(m)
+      continue
+    }
+    const s = m.toolResults.map(r => sent.get(r.tool_use_id)).find(Boolean)
+    if (s?.media) return { reason: 'image-sent-during-turn' }
+    tail.push({ role: m.role, text: [m.text, s?.text].filter(Boolean).join('\n\n'), toolUses: [], toolResults: m.toolResults })
+  }
   return { messages: [{ role: 'user', text: head, toolUses: [] }, ...tail] }
 }

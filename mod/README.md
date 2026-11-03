@@ -20,4 +20,6 @@ Full documentation: https://github.com/SocialBuzzStudio/live-compact
 
 - `session.start`: starts a 5-second timer that reads the context size and the auto-compact threshold. Passes the event through unchanged.
 - `classic.SessionStart`: reads the transcript path, which goes into the summary message, and drops a ready summary after `/clear` or a resumed session. Passes the event through unchanged; it does not touch settings, instructions or other hooks.
+- `prompt.submit`: notes whether a prompt typed while Claude is working has an image. Passes the prompt through unchanged.
+- `session.append`: notes the newest tool result and the text of each message typed while Claude is working, which Claude Code files beside that result, so compaction keeps it. Passes every row through unchanged.
 - `session.compact`: on auto-compaction, or `/compact` without instructions, replaces the conversation with the ready summary and the newest messages verbatim. Without a ready summary, with `/compact` instructions, and for subagents it calls the standard compaction unchanged. It skips Claude Code's own background precompute of the summary, because the plugin writes that summary itself.

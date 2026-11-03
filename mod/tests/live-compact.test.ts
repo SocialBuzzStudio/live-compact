@@ -63,6 +63,7 @@ function world(on: On, opts: World) {
   const clock = mock.clock(on)
   mock.env(on, opts.env ?? {})
   on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('prompt.submit', (_, e) => ({ text: e.text }))
   on('session.id', () => ({ value: 's1' }))
   on('classic.SessionStart', () => ({}))
   on('session.usage', (_, e) => ({
@@ -360,6 +361,62 @@ test('a summary serves one compaction only', async ($, on) => {
   await clock.advance(5_000)
   await $.session.compact({ trigger: 'auto', messages: AT_COMPACT })
   expect((await $.session.compact({ trigger: 'auto', messages: AT_COMPACT })).messages).toEqual(NATIVE)
+})
+
+/** A tool result filed in the main conversation, as the engine files one. */
+const resultFiled = ($: Engine, id: string) =>
+  $.session.append({
+    message: { type: 'user', role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: `out ${id}` }] },
+    door: 'tool-result',
+    origin: { kind: 'tool', tool: 'Bash' },
+    uuid: `r-${id}`,
+  })
+
+/** A message typed while the turn ran: the person's Enter, then the row the engine files after the result that takes it in. */
+async function sendDuringTurn($: Engine, text: string, image = false) {
+  await $.prompt.submit({ text, turnId: 'turn-1', wait: false, origin: { kind: 'composer' }, ...(image ? { attachments: [{ type: 'image' as const }] } : {}) })
+  await $.session.append({
+    message: {
+      type: 'attachment',
+      name: 'queued_command',
+      role: 'user',
+      content: [{ type: 'text', text: `<system-reminder>
+The user sent a new message while you were working:
+${text}
+</system-reminder>` }],
+    },
+    door: 'delivery',
+    origin: { kind: 'composer' },
+    uuid: `q-${text}`,
+  })
+}
+
+test('a message sent during the turn after the fork stays once, with the result it came after', async ($, on) => {
+  const { clock } = world(on, { tokens: START })
+  await start($)
+  await resultFiled($, 't1')
+  await sendDuringTurn($, 'seen by the fork')
+  await clock.advance(5_000)
+  await resultFiled($, 't2')
+  await sendDuringTurn($, 'PELIKAN-9')
+  const out = (await $.session.compact({ trigger: 'auto', messages: AT_COMPACT })).messages ?? []
+  expect(out[0]?.text).toContain('SUMMARY')
+  expect(out.slice(1).map(m => m.text.includes('PELIKAN-9'))).toEqual([false, true, false])
+  expect(out.some(m => m.text.includes('seen by the fork'))).toBe(false)
+  // The next compaction finds it in the rebuilt message, not again beside it.
+  await clock.advance(5_000)
+  const again = (await $.session.compact({ trigger: 'auto', messages: AT_COMPACT })).messages ?? []
+  expect(again.slice(1).map(m => m.text)).toEqual(['', '', 'done'])
+})
+
+test('a message typed with an image during the turn after the fork means a standard compaction', async ($, on) => {
+  const { s, clock } = world(on, { tokens: START })
+  await start($)
+  await clock.advance(5_000)
+  await resultFiled($, 't2')
+  await sendDuringTurn($, 'see the screenshot', true)
+  expect((await $.session.compact({ trigger: 'auto', messages: AT_COMPACT })).messages).toEqual(NATIVE)
+  expect(s.logs).toEqual(['live-compact: summary not used (image-sent-during-turn); standard compaction'])
 })
 
 test('leaves subagents, precompute, plugins and /compact with instructions to the engine', async ($, on) => {

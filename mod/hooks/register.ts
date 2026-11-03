@@ -1,5 +1,5 @@
 import type { EngineInterface, Register } from 'claude-code'
-import { compacted, forkAnchor } from './compaction'
+import { compacted, forkAnchor, type SentDuringTurn } from './compaction'
 import { skillsSection } from './skills'
 import { SUMMARY_PROMPT, headText } from './summary-prompt'
 
@@ -17,12 +17,16 @@ let retryAt = 0
 let ready: { summary: string; anchor: string; tokens: number } | undefined
 let transcriptPath: string | undefined
 const logLines = new Map<string, string[]>()
+let lastResult: string | undefined // tool_use_id of the main conversation's newest tool result
+const sentAfter = new Map<string, SentDuringTurn>() // messages sent while a turn ran, by the result each was filed after
+const typedWithMedia = new Set<string>() // prompts typed during a turn with an image, until the engine files them
 const shownErrors = new Set<string>()
 
 /** Drops what was prepared: after any compaction, `/clear` or a resume it describes another conversation. */
 function reset() {
   generation++
   ready = undefined
+  sentAfter.clear() // what was sent is in the summary or in the messages kept
   retryAt = 0
   shownErrors.clear() // once per reason in a cycle, not once per process
 }
@@ -109,6 +113,30 @@ export const register: Register = on => {
     return r
   })
 
+  // A message sent while a turn runs is filed beside the next tool result, out of the compact hook's
+  // messages; rebuilding that result would drop it, so it is kept here (E0-T4).
+  on('prompt.submit', async ($, e, next) => {
+    if (e.turnId && e.attachments?.length) typedWithMedia.add(e.text)
+    return next(e)
+  })
+
+  on('session.append', { door: 'tool-result' }, async ($, e, next) => {
+    const id = e.message.content.findLast(b => b.type === 'tool_result')?.tool_use_id
+    if (!e.agentId && typeof id === 'string') lastResult = id
+    return next(e)
+  })
+
+  on('session.append', { door: 'delivery' }, async ($, e, next) => {
+    if (!e.agentId && e.message.name === 'queued_command' && lastResult) {
+      const text = e.message.content.map(b => (b.type === 'text' && typeof b.text === 'string' ? b.text : '')).join('')
+      const typed = [...typedWithMedia].find(t => text.includes(t))
+      if (typed !== undefined) typedWithMedia.delete(typed)
+      const earlier = sentAfter.get(lastResult)
+      sentAfter.set(lastResult, { text: [earlier?.text, text].filter(Boolean).join('\n\n'), media: !!earlier?.media || typed !== undefined })
+    }
+    return next(e)
+  })
+
   on('classic.SessionStart', async ($, e, next) => {
     // A main compaction resets in session.compact; a subagent's start or compaction is not this conversation.
     if (e.agent_id || e.source === 'compact') return next(e)
@@ -121,10 +149,11 @@ export const register: Register = on => {
     if (e.agentId) return next(e)
     if (e.trigger === 'precompute') return { skip: 'live-compact prepares its own summary' }
     const prepared = ready
+    const sent = new Map(sentAfter)
     reset()
     const eligible = e.trigger === 'auto' || (e.trigger === 'manual' && !e.instructions)
     const skills = prepared && eligible ? skillsSection(await $.session.messages({ as: 'api' })) : undefined
-    const result = prepared && skills ? compacted(e.messages, prepared.anchor, headText(prepared.summary, transcriptPath, skills.text)) : undefined
+    const result = prepared && skills ? compacted(e.messages, prepared.anchor, headText(prepared.summary, transcriptPath, skills.text), sent) : undefined
     const own = result && 'messages' in result ? result.messages : undefined
     const { tokens } = (await $.session.usage()).context
     void log($, {
@@ -136,6 +165,7 @@ export const register: Register = on => {
       of: e.messages.length,
       ...(own && skills ? { skills: skills.skills, skillCalls: e.messages.filter(m => m.toolUses.some(u => u.tool === 'Skill')).length } : {}),
       ...(own && skills?.omitted ? { skillsOmitted: skills.omitted } : {}),
+      ...(sent.size ? { sentDuringTurn: sent.size } : {}),
       ...(prepared && tokens ? { tail: tokens - prepared.tokens } : {}),
       ...(result && 'reason' in result ? { reason: result.reason } : {}),
     })

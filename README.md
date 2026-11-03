@@ -23,8 +23,8 @@ Diagram source: [assets/how-it-works.mmd](assets/how-it-works.mmd).
 2. When the context comes within 40k tokens of the threshold (at most 20% of the threshold), the plugin forks one background request. The fork uses the same model and the same transcript, and its only job is to write the summary. Your turn keeps running.
 3. When auto-compaction starts (or you run `/compact` with no instructions), the plugin replaces the conversation with:
    - a first message with the summary, the path to the full transcript and the skills used earlier in the session,
-   - every message after the point the fork saw, word for word.
-4. In every other case Claude Code compacts the usual way: no summary yet, the conversation was rewound past that point, `/compact` with instructions, and subagents.
+   - every message after the point the fork saw, word for word, including messages you typed while Claude was working.
+4. In every other case Claude Code compacts the usual way: no summary yet, the conversation was rewound past that point, a message with an image typed while Claude was working after that point, `/compact` with instructions, and subagents.
 
 The summary prompt follows the structure of Claude Code's own summary. If your `CLAUDE.md` has a section on compaction (for example `# Compact instructions`), the summary follows it.
 
@@ -48,7 +48,7 @@ After each compaction the plugin writes one line to the transcript. The model do
 | --- | --- |
 | `live-compact: compacted with the summary prepared in the background; N recent messages kept verbatim; skills carried over: S` | Compaction used the plugin's summary |
 | `live-compact: no summary ready yet; standard compaction` | The summary was still being written, or the context never came close to the threshold (for example a manual `/compact` early on) |
-| `live-compact: summary not used (<reason>); standard compaction` | The summary no longer fits the conversation: `anchor-missing` (the conversation was rewound), `too-long` (more than 4,096 messages) |
+| `live-compact: summary not used (<reason>); standard compaction` | The summary no longer fits the conversation: `anchor-missing` (the conversation was rewound), `too-long` (more than 4,096 messages), `image-sent-during-turn` (a message you typed while Claude was working has an image, which the plugin cannot keep) |
 | `live-compact: background summary failed: <reason>` | The background request failed (`api-error <status>`, `empty-reply`, `nothing-to-fork`); it retries after another 20k tokens |
 
 > [!NOTE]
@@ -66,7 +66,7 @@ Set `LIVE_COMPACT_LOG_DIR` to a folder to get one JSON line per event in `<sessi
 | --- | --- |
 | `fork-start` | `tokens` (context size), `threshold` |
 | `fork-end` | `ms`, `chars` (summary length) or `reason` (failure), `stale` (a compaction came first), `usage`, `ctx` (input tokens) |
-| `compact` | `trigger`, `prepared`, `own` (the plugin compacted), `kept` (messages kept verbatim), `of` (all messages), `tail` (tokens added after the fork started), `skills`, `skillsOmitted`, `skillCalls`, `reason` |
+| `compact` | `trigger`, `prepared`, `own` (the plugin compacted), `kept` (messages kept verbatim), `of` (all messages), `tail` (tokens added after the fork started), `skills`, `skillsOmitted`, `skillCalls`, `sentDuringTurn` (messages typed while Claude was working, kept with the newest messages), `reason` |
 | `tick-error` | `message` |
 
 ## Limitations
