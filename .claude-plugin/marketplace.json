@@ -1,0 +1,5 @@
+{
+  "name": "socialbuzzstudio",
+  "owner": { "name": "SocialBuzzStudio" },
+  "plugins": [{ "name": "live-compact", "source": "./mod" }]
+}
