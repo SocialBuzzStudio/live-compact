@@ -8,6 +8,8 @@ When a long session reaches its context limit, Claude Code stops and has the mod
 
 live-compact writes that summary in the background, while you keep working, as the context gets close to the limit. When auto-compaction starts, the plugin swaps in the ready summary in about 10-20 ms. It keeps the newest messages word for word. If no summary is ready yet, Claude Code compacts the usual way.
 
+![Side by side: standard auto-compaction blocks the session for 1:38, live-compact finishes in 0.02 s and you keep typing](assets/before-after.gif)
+
 > [!IMPORTANT]
 > live-compact uses Claude Code's plugin hook modules (`session.compact`, `$.model.fork`). That API is in early access and may change between releases. Tested on Windows: install and tests on Claude Code 2.1.300 to 2.1.317, compaction with the plugin on 2.1.317 from a clean profile. Other systems are not verified yet.
 
