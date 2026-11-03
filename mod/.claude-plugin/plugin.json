@@ -6,5 +6,6 @@
   "license": "MIT",
   "homepage": "https://github.com/SocialBuzzStudio/live-compact",
   "repository": "https://github.com/SocialBuzzStudio/live-compact",
-  "supportUrl": "https://github.com/SocialBuzzStudio/live-compact/issues"
+  "supportUrl": "https://github.com/SocialBuzzStudio/live-compact/issues",
+  "privacyPolicyUrl": "https://github.com/SocialBuzzStudio/live-compact/blob/main/mod/README.md#what-it-runs-sends-and-stores"
 }
