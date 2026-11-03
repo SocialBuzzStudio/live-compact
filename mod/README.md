@@ -1,22 +1,18 @@
 # live-compact
 
-Auto-compaction for Claude Code without the wait. Shortly before the auto-compact threshold, the plugin asks the session's own model for a summary in the background. When auto-compaction starts, it puts that summary in place in milliseconds and keeps the newest messages unchanged. If no summary is ready, Claude Code runs its standard compaction.
+Auto-compaction for Claude Code without the wait. Shortly before the auto-compact threshold, the plugin asks the session's own model for a summary in the background. When auto-compaction starts, it puts that summary in place within milliseconds and keeps the newest messages unchanged. If no summary is ready, Claude Code runs its standard compaction.
 
-Built on Claude Code's plugin hook API, which is in early access, and tested on Windows only. Requirements, limitations, and how to disable or remove the plugin: [full documentation](https://github.com/SocialBuzzStudio/live-compact).
-
-Install in a terminal, then restart running sessions:
-
-```
-claude plugin install live-compact --marketplace SocialBuzzStudio/live-compact
-```
+Uses an early-access feature of Claude Code (plugin hooks); tested on Windows only. Installation in a terminal or in the VS Code extension, requirements, limitations, and how to disable or remove the plugin: [full documentation](https://github.com/SocialBuzzStudio/live-compact#installation).
 
 ## What it runs, sends and stores
 
-- Runs one hooks module (`hooks/register.ts`) inside Claude Code. It starts no processes and installs no packages.
-- Sends one background request per compaction through Claude Code's own model call (`$.model.fork`), to the same Claude API and with the same conversation that standard compaction would send. If that request fails, it is sent again after another 20k tokens; if its summary goes unused (for example after `/clear`), the request was extra. It contacts no other service.
-- Stores nothing by default. Only if you set `LIVE_COMPACT_LOG_DIR` does it write one JSON line per event to `<session id>.jsonl` in that folder: token counts, timings and reasons, without conversation text. It writes no other file: no settings, instructions, build or start-up files.
+- Runs one code file (`hooks/register.ts`) inside Claude Code. It starts no programs and installs nothing.
+- Sends the conversation only where Claude Code already sends it: one background request per compaction to the same model, through Claude Code's own model call, the same content standard compaction would send. If that request fails, it is sent again after another 20k tokens; if its summary goes unused (for example after `/clear`), the request was extra. It contacts no other service.
+- Stores nothing by default. Only if you set `LIVE_COMPACT_LOG_DIR` does it write one line per event to `<session id>.jsonl` in that folder: counts, times and reasons, no conversation text. It changes no settings or other files.
 
 ## Hooks
+
+For developers and reviewers: the Claude Code events the plugin uses.
 
 - `session.start`: starts a 5-second timer that checks the context size (and, once a minute, the auto-compact threshold). Passes the event through unchanged.
 - `classic.SessionStart`: reads the path of the session file, which goes into the summary message, and drops a ready summary after `/clear` or a resumed session. Passes the event through unchanged; it does not touch settings, instructions or other hooks.

@@ -3,7 +3,7 @@ flowchart TD
     B["The context is within<br/>40k tokens of the<br/>auto-compact threshold"]
     C["Background request: the same<br/>model writes the summary.<br/>Claude keeps working"]
     D["The context reaches<br/>the threshold:<br/>auto-compaction starts"]
-    E{"Summary ready<br/>and still fits?"}
+    E{"Is a usable<br/>summary ready?"}
     F["Summary and newest<br/>messages in place<br/>in 8-20 ms"]
     G["Standard compaction:<br/>you wait, usually<br/>80-160 s"]
     A --> B --> C --> D --> E
