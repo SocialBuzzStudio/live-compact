@@ -4,5 +4,6 @@
   "description": "Prepares the compaction summary in the background, so auto-compaction takes milliseconds instead of minutes.",
   "author": { "name": "SocialBuzzStudio" },
   "license": "MIT",
+  "homepage": "https://github.com/SocialBuzzStudio/live-compact",
   "repository": "https://github.com/SocialBuzzStudio/live-compact"
 }
