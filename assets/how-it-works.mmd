@@ -1,29 +1,13 @@
-sequenceDiagram
-    participant CC as Claude Code session
-    participant LC as live-compact plugin
-    participant API as Claude API
-
-    Note over CC: You keep working, the context grows
-
-    loop Every 5 seconds
-        LC->>CC: Read the context size and the auto-compact threshold
-        CC-->>LC: For example 330k of 367k tokens
-    end
-
-    Note over LC: Context is within 40k tokens of the threshold
-    LC->>API: Background fork: same model and transcript,<br/>asked only for a summary
-    Note over CC: Your turn keeps running, no wait
-    API-->>LC: Summary, kept with the last message the fork saw
-
-    Note over CC: Context reaches the threshold: auto-compaction starts
-    CC->>LC: session.compact hook
-
-    alt Summary ready and its last message still in the conversation
-        LC-->>CC: New conversation: summary, transcript path, skills,<br/>then every newer message word for word
-        Note over CC: Session continues in about 10-20 ms<br/>Transcript line: "live-compact: compacted..."
-    else No summary yet, or the conversation was rewound
-        LC->>CC: Hand over to standard compaction
-        CC->>API: Summarize the whole conversation
-        API-->>CC: Summary, usually after 1-3 minutes
-        Note over CC: Session continues after the wait
-    end
+flowchart TD
+    A["You keep working.<br/>Every 5 s the plugin<br/>checks the context size"]
+    B["The context is within<br/>40k tokens of the<br/>auto-compact threshold"]
+    C["Background request: the same<br/>model writes the summary.<br/>Claude keeps working"]
+    D["The context reaches<br/>the threshold:<br/>auto-compaction starts"]
+    E{"Summary ready<br/>and still fits?"}
+    F["Summary and newest<br/>messages in place<br/>in 8-20 ms"]
+    G["Standard compaction:<br/>you wait, usually<br/>80-160 s"]
+    A --> B --> C --> D --> E
+    E -- yes --> F
+    E -- no --> G
+    classDef fast stroke:#287BFF,stroke-width:3px
+    class F fast
