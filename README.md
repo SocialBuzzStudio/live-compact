@@ -13,6 +13,10 @@ live-compact writes that summary in the background, while you keep working, as t
 
 ## How it works
 
+![live-compact prepares the summary in the background before the threshold; at compaction it swaps it in, or hands over to standard compaction](assets/how-it-works.png)
+
+Diagram source: [assets/how-it-works.mmd](assets/how-it-works.mmd).
+
 1. Every 5 seconds the plugin reads the context size and Claude Code's auto-compact threshold.
 2. When the context comes within 40k tokens of the threshold (at most 20% of the threshold), the plugin forks one background request. The fork uses the same model and the same transcript, and its only job is to write the summary. Your turn keeps running.
 3. When auto-compaction starts (or you run `/compact` with no instructions), the plugin replaces the conversation with:
