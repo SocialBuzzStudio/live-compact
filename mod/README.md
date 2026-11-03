@@ -2,6 +2,12 @@
 
 Auto-compaction for Claude Code without the wait. When the context comes within 40k tokens of the auto-compact threshold, the plugin asks the session's own model for a summary in the background. When auto-compaction starts, it swaps that summary in within milliseconds and keeps the newest messages word for word. If no summary is ready, Claude Code compacts the usual way.
 
+Install, then restart running sessions:
+
+```bash
+claude plugin install live-compact --marketplace SocialBuzzStudio/live-compact
+```
+
 Full documentation: https://github.com/SocialBuzzStudio/live-compact
 
 ## What it runs, sends and stores
