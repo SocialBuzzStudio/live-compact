@@ -16,6 +16,6 @@ For developers and reviewers: the Claude Code events the plugin uses.
 
 - `session.start`: starts a 5-second timer that checks the context size (and, once a minute, the auto-compact threshold). Passes the event through unchanged.
 - `classic.SessionStart`: reads the path of the session file, which goes into the summary message, and drops a ready summary after `/clear` or a resumed session. Passes the event through unchanged; it does not touch settings, instructions or other hooks.
-- `prompt.submit`: notes whether a prompt typed while Claude is working has an image or another attachment. Passes the prompt through unchanged.
+- `prompt.submit`: notes whether a prompt typed while Claude is working has an image or another attachment, so that message is kept whole after compaction. Passes the prompt through unchanged.
 - `session.append`: notes the newest tool result and the text of each message typed while Claude is working, which Claude Code files beside that result, so compaction keeps it. Passes every row through unchanged.
 - `session.compact`: on auto-compaction, or `/compact` without instructions, replaces the conversation with the ready summary and the newest messages unchanged. Without a ready summary, with `/compact` instructions, and for subagents it calls the standard compaction unchanged. Some Claude Code versions prepare a summary of their own in the background (the `precompute` trigger); the plugin skips that one, because it writes the summary itself.

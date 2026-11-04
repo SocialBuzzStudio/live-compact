@@ -29,7 +29,7 @@ Terms such as session, skill and subagent are explained in the [Claude Code glos
 4. Otherwise Claude Code runs its standard compaction:
    - no summary is ready yet: the context reached the threshold before the summary was finished, for example after one step that added more than about 40,000 tokens (several large files read at once);
    - the ready summary was dropped by `/clear`, by resuming the conversation or by reloading the plugin;
-   - the summary no longer fits the conversation: you went back (`Esc` twice, or `/rewind`) to a message the summary already covers, the conversation has 4,096 or more messages, or a message you typed while Claude was working has an image or another attachment;
+   - the summary no longer fits the conversation: you went back (`Esc` twice, or `/rewind`) to a message the summary already covers, or the conversation has 4,096 or more messages;
    - `/compact` with your own instructions (for example `/compact keep the test results`), and subagents (helper agents Claude starts for part of a task).
 
 The summary prompt follows the structure of Claude Code's own summary. If your project instructions file (`CLAUDE.md`) has a section on compaction (for example `# Compact instructions`), the summary follows it.
@@ -77,7 +77,7 @@ The plugin reports each compaction with one line in the conversation: in a termi
 | --- | --- |
 | `live-compact: compacted with the summary prepared in the background; N recent messages kept verbatim; skills carried over: S` | The plugin compacted: N messages after the summary kept verbatim (unchanged), S skills carried over |
 | `live-compact: no summary ready yet; standard compaction` | No summary was ready (step 4 above). A `/compact` early in a conversation always gives this line |
-| `live-compact: summary not used (<reason>); standard compaction` | The summary no longer fits: `anchor-missing` (you went back to an earlier message), `too-long` (4,096 or more messages), `image-sent-during-turn` (a message you typed while Claude was working has an image or another attachment) |
+| `live-compact: summary not used (<reason>); standard compaction` | The summary no longer fits: `anchor-missing` (you went back to an earlier message), `too-long` (4,096 or more messages) |
 | `live-compact: background summary failed: <reason>` | The background request failed (for example `api-error 529`, or an error message). Nothing else changes: it tries again after another 20,000 tokens, and until then Claude Code uses standard compaction. No need to turn the plugin off |
 
 After `/compact` with your own instructions, and in subagents, there is no line: those always use standard compaction.
@@ -96,7 +96,7 @@ The plugin sends the conversation only where Claude Code already sends it: the s
 ## Limitations
 
 - After the plugin compacts, the context is larger than after standard compaction: the messages after the summary stay unchanged, usually up to about 40,000 tokens, so the next compaction comes sooner.
-- Images in tool results among the messages kept after compaction are dropped; their text stays. A message with an image that you type while Claude is working leads to standard compaction instead, so that image is not lost.
+- Images in tool results among the messages kept after compaction are dropped; their text stays. Images in messages you type while Claude is working are kept. Because of a Claude Code bug, if you reopen such a conversation from the history before its next compaction, Claude Code loads the messages from before the last compaction again, so the context is larger.
 - If you set up your own hooks that run before or after compaction (`PreCompact` or `PostCompact` in `settings.json`), they may not run when the plugin compacts.
 - In our everyday sessions on 2 and 3 November 2026 (test sessions not counted), 14 of 17 auto-compactions used the plugin's summary. In the other 3, the summary was not ready yet.
 - If the plugin was installed or reloaded while a conversation was open, the first message after compaction in that conversation has no path to the session file. A conversation started after installing does not have this problem.

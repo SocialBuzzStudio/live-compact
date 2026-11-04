@@ -40,7 +40,7 @@ export function forkAnchor(rows: readonly SessionMessage[], api: readonly ApiMes
   return at < 0 ? undefined : anchorKeys(rows)[at]
 }
 
-export type Compaction = { messages: SessionMessage[] } | { reason: 'anchor-missing' | 'too-long' | 'image-sent-during-turn' }
+export type Compaction = { messages: SessionMessage[] } | { reason: 'anchor-missing' | 'too-long' }
 
 /**
  * The conversation after compaction: the head message, then every message after the anchor.
@@ -50,8 +50,9 @@ export type Compaction = { messages: SessionMessage[] } | { reason: 'anchor-miss
  * A message with tool results goes back without its `handle`: kept whole, the engine links it to
  * the pre-compaction copy of its tool_use, so `--resume` loads the full history (E1-S4). Rebuilt,
  * it would lose a message sent during the turn that the engine keeps beside it, so that one's text
- * (`sent`, by the tool_use_id of the result it came after) joins it; one with an image is refused,
- * as only text goes back.
+ * (`sent`, by the tool_use_id of the result it came after) joins it. One with an image goes back
+ * whole instead, as only text can be rebuilt: the image stays, and `--resume` loads the history
+ * before this compaction until the next one (E0-T9, D5).
  */
 export function compacted(
   messages: readonly SessionMessage[],
@@ -69,7 +70,10 @@ export function compacted(
       continue
     }
     const s = m.toolResults.map(r => sent.get(r.tool_use_id)).find(Boolean)
-    if (s?.media) return { reason: 'image-sent-during-turn' }
+    if (s?.media) {
+      tail.push(m) // ponytail: whole despite the engine bug (E0-T9); once fixed, every tool result can go back whole
+      continue
+    }
     tail.push({ role: m.role, text: [m.text, s?.text].filter(Boolean).join('\n\n'), toolUses: [], toolResults: m.toolResults })
   }
   return { messages: [{ role: 'user', text: head, toolUses: [] }, ...tail] }

@@ -1,6 +1,6 @@
 {
   "name": "live-compact",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Prepares the compaction summary in the background, so auto-compaction takes milliseconds instead of minutes.",
   "author": { "name": "SocialBuzzStudio" },
   "license": "MIT",

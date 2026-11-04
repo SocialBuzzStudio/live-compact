@@ -409,14 +409,16 @@ test('a message sent during the turn after the fork stays once, with the result 
   expect(again.slice(1).map(m => m.text)).toEqual(['', '', 'done'])
 })
 
-test('a message typed with an image during the turn after the fork means a standard compaction', async ($, on) => {
+test('a message typed with an image during the turn after the fork goes back whole, so the engine keeps the image', async ($, on) => {
   const { s, clock } = world(on, { tokens: START })
   await start($)
   await clock.advance(5_000)
   await resultFiled($, 't2')
   await sendDuringTurn($, 'see the screenshot', true)
-  expect((await $.session.compact({ trigger: 'auto', messages: AT_COMPACT })).messages).toEqual(NATIVE)
-  expect(s.logs).toEqual(['live-compact: summary not used (image-sent-during-turn); standard compaction'])
+  const out = (await $.session.compact({ trigger: 'auto', messages: AT_COMPACT })).messages ?? []
+  expect(out[0]?.text).toContain('SUMMARY')
+  expect(out.slice(1).map(m => m.handle)).toEqual(['h3', 'h4', 'h5'])
+  expect(s.logs).toEqual(['live-compact: compacted with the summary prepared in the background; 3 recent messages kept verbatim; skills carried over: 0'])
 })
 
 test('leaves subagents, precompute, plugins and /compact with instructions to the engine', async ($, on) => {
